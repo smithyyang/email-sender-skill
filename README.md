@@ -67,33 +67,18 @@ python scripts/send_csu_email.py \
 python scripts/send_csu_email.py -t boss@company.com -s "周报" -b "请查收" -a report.pdf
 ```
 
-## 🛠️ 安装到其他 Agent / CLI
+## 🛠️ 安装
 
-### OpenCode Agent
-
-将本仓库克隆到 skills 目录即可：
+### Claude Code
 
 ```bash
-# 克隆到 OpenCode skills 目录
 git clone https://github.com/smithyyang/email-sender-skill.git \
-  ~/.config/opencode/skills/email-sender
+  ~/.claude/skills/email-sender
 ```
 
-之后，当对话中出现以下关键词时，OpenCode 会自动加载此 skill：
+之后，当对话中出现以下关键词时，Claude Code 会自动加载此 skill：
 
 > "send email", "发邮件", "SMTP", "邮箱发送"
-
-### 通用 AI Agent（如 Claude Code、Cursor 等）
-
-把 `SKILL.md` 的内容复制到项目根目录的 `AGENTS.md`（或 agent 的 system prompt）中，AI 就会遵循其中的工作流程和代码规范来发送邮件。
-
-### CLI / Shell 脚本
-
-此仓库自带可直接运行的 Python 脚本，无需 AI Agent 也可独立使用：
-
-```bash
-python scripts/send_csu_email.py --help
-```
 
 ## 📚 常见 SMTP 配置参考
 
