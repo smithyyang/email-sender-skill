@@ -1,4 +1,4 @@
-# Email Sender Skill for OpenCode
+# Email Sender Skill
 
 > 🎯 让 AI Agent 一键发送邮件的 skill，完美兼容 Coremail 校园/企业邮箱系统。
 
@@ -69,6 +69,17 @@ python scripts/send_csu_email.py -t boss@company.com -s "周报" -b "请查收" 
 
 ## 🛠️ 安装
 
+### OpenCode
+
+```bash
+git clone https://github.com/smithyyang/email-sender-skill.git \
+  ~/.config/opencode/skills/email-sender
+```
+
+之后，当对话中出现以下关键词时，OpenCode 会自动加载此 skill：
+
+> "send email", "发邮件", "SMTP", "邮箱发送"
+
 ### Claude Code
 
 ```bash
@@ -79,6 +90,14 @@ git clone https://github.com/smithyyang/email-sender-skill.git \
 之后，当对话中出现以下关键词时，Claude Code 会自动加载此 skill：
 
 > "send email", "发邮件", "SMTP", "邮箱发送"
+
+### CLI / Shell 脚本
+
+此仓库自带可直接运行的 Python 脚本，无需 AI Agent 也可独立使用：
+
+```bash
+python scripts/send_csu_email.py --help
+```
 
 ## 📚 常见 SMTP 配置参考
 
