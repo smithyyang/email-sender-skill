@@ -75,7 +75,7 @@ python scripts/send_csu_email.py -t boss@company.com -s "周报" -b "请查收" 
 
 ```bash
 # 克隆到 OpenCode skills 目录
-git clone https://github.com/YOUR_USERNAME/email-sender.git \
+git clone https://github.com/smithyyang/email-sender-skill.git \
   ~/.config/opencode/skills/email-sender
 ```
 
