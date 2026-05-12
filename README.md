@@ -105,16 +105,6 @@ python scripts/send_csu_email.py --help
 | QQ 邮箱 | `smtp.qq.com` | 465 | 授权码（非 QQ 密码） |
 | 163 | `smtp.163.com` | 465 | 授权码 |
 
-## 🔒 安全提示
-
-- **不要将真实密码直接提交到 GitHub**。如果是开源仓库，请使用环境变量或配置文件传入敏感信息。
-- 建议把 `scripts/send_csu_email.py` 加入 `.gitignore`，或者在配置区改用环境变量：
-  ```python
-  import os
-  CLIENT_PASSWORD = os.environ.get("EMAIL_PASSWORD")
-  ```
-- 备用密码泄露后，可在网页邮箱重新生成，旧密码自动失效。
-
 ## 🤝 贡献
 
 欢迎 PR 和 Issue！例如：
