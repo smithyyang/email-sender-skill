@@ -1,27 +1,29 @@
-# Email Sender Skill
+# Email Skill
 
 English | [中文](README.md)
 
-> 🎯 A skill that lets AI Agents send emails with one command, fully compatible with the Coremail campus/enterprise email system.
+> 🎯 A skill that lets AI Agents send emails and read inbox messages in read-only mode, compatible with Coremail campus/enterprise email systems.
 
 ## ✨ Features
 
-- ✅ **SMTP Email Sending** (SSL encrypted)
-- ✅ **Command Line Arguments**: specify recipient, subject, and body
+- ✅ **SMTP Email Sending** with SSL encryption
+- ✅ **IMAP Read-Only Inbox Reading**: read latest/unread messages using `BODY.PEEK[]`; does not mark messages as read, send, delete, or move mail
+- ✅ **Command Line Arguments**: specify recipient, subject, body, attachments, read limit, unread-only mode, etc.
 - ✅ **Multi-attachment Support**: auto-detects MIME types for PDFs, images, Office documents, etc.
-- ✅ **BCC (Blind Carbon Copy)**: automatically BCCs a copy to your own inbox for easy record tracking in the web client; the primary recipient cannot see the BCC
+- ✅ **BCC (Blind Carbon Copy)**: automatically BCCs a copy to your own inbox for easy record tracking in the web client
 - ✅ **Coremail Compatible**: supports campus/enterprise mailboxes with Two-Factor Authentication (2FA) using an Alternative Password
 
 ## 📁 Repository Structure
 
 ```
-email-sender/
+email/
 ├── SKILL.md                       # Skill metadata and detailed documentation
 ├── README.md                      # Chinese version
 ├── README.en.md                   # English version (this file)
 ├── LICENSE.txt
 └── scripts/
-    └── send_csu_email.py          # Ready-to-run email script
+    ├── send_csu_email.py          # Ready-to-run email sender
+    └── read_csu_email.py          # Read-only inbox reader
 ```
 
 ## ⚡ Quick Start
@@ -39,8 +41,8 @@ SMTP_PORT = 465                               # SSL port
 # =========================================
 ```
 
-> **About the Alternative Password**  
-> If your mailbox has Two-Factor Authentication (2FA) enabled, you need to generate a "Client/Alternative Password" in the webmail settings for SMTP login.  
+> **About the Alternative Password**
+> If your mailbox has Two-Factor Authentication (2FA) enabled, generate a client/alternative password in the webmail settings for SMTP/IMAP login.
 > The usual path is: Mailbox Settings → Two-Factor Authentication → Configure Alternative Password.
 
 ### 2. Send Emails
@@ -58,7 +60,7 @@ python scripts/send_csu_email.py \
   --subject "Weekly Report" \
   --body "Please find this week's work report attached."
 
-# With attachments (auto-detects MIME types for PDF, images, Office, etc.)
+# With attachments
 python scripts/send_csu_email.py \
   --target team@example.com \
   --attach report.pdf photo.jpg data.xlsx
@@ -70,6 +72,23 @@ You can also use short arguments:
 python scripts/send_csu_email.py -t boss@company.com -s "Weekly Report" -b "Please review." -a report.pdf
 ```
 
+### 3. Read Inbox Messages in Read-Only Mode
+
+`read_csu_email.py` reuses `SENDER_EMAIL` and `CLIENT_PASSWORD` from `send_csu_email.py` by default. Environment variables can override them.
+
+```bash
+# Read the latest 5 email bodies
+python scripts/read_csu_email.py -n 5
+
+# Read unread messages only
+python scripts/read_csu_email.py --unread -n 10
+
+# Show headers only, without body content
+python scripts/read_csu_email.py --summary-only -n 10
+```
+
+The script uses IMAP read-only mode and `BODY.PEEK[]`; it does not send, delete, move, or mark messages as read.
+
 ## 🛠️ Installing for Other Agents / CLI
 
 ### OpenCode Agent
@@ -77,44 +96,41 @@ python scripts/send_csu_email.py -t boss@company.com -s "Weekly Report" -b "Plea
 Clone this repository into the skills directory:
 
 ```bash
-# Clone into the OpenCode skills directory
 git clone https://github.com/smithyyang/email-sender-skill.git \
-  ~/.config/opencode/skills/email-sender
+  ~/.config/opencode/skills/email
 ```
 
 After that, when any of the following keywords appear in a conversation, OpenCode will automatically load this skill:
 
-> "send email", "发邮件", "SMTP", "邮箱发送"
+> "send email", "发邮件", "SMTP", "邮箱发送", "read email", "读邮箱", "查看邮件", "收件箱", "IMAP"
 
 ### Claude Code
 
 ```bash
-# Clone into the Claude Code skills directory
 git clone https://github.com/smithyyang/email-sender-skill.git \
-  ~/.claude/skills/email-sender
+  ~/.claude/skills/email
 ```
 
-After that, when any of the following keywords appear in a conversation, Claude Code will automatically load this skill:
-
-> "send email", "发邮件", "SMTP", "邮箱发送"
+After that, Claude Code can load this skill when the same keywords appear.
 
 ### CLI / Shell Script
 
-This repository includes a ready-to-run Python script that can be used independently without any AI Agent:
+This repository includes ready-to-run Python scripts that can be used independently without any AI Agent:
 
 ```bash
 python scripts/send_csu_email.py --help
+python scripts/read_csu_email.py --help
 ```
 
-## 📚 Common SMTP Configurations
+## 📚 Common SMTP / IMAP Configurations
 
-| Email Provider | SMTP Server        | Port | Password Note                  |
-|----------------|--------------------|------|--------------------------------|
-| CSU (中南大学) | `mail.csu.edu.cn`  | 465  | Alternative Password (with 2FA)|
-| Gmail          | `smtp.gmail.com`   | 587  | App Password                   |
-| Outlook        | `smtp.office365.com`| 587 | App Password                   |
-| QQ Mail        | `smtp.qq.com`      | 465  | Authorization Code (not QQ pwd)|
-| 163 Mail       | `smtp.163.com`     | 465  | Authorization Code             |
+| Email Provider | SMTP Server | SMTP Port | IMAP Server | IMAP Port | Password Note |
+|----------------|-------------|-----------|-------------|-----------|---------------|
+| CSU (中南大学) | `mail.csu.edu.cn` | 465 | `mail.csu.edu.cn` | 993 | Alternative Password with 2FA |
+| Gmail | `smtp.gmail.com` | 587 | `imap.gmail.com` | 993 | App Password |
+| Outlook | `smtp.office365.com` | 587 | `outlook.office365.com` | 993 | App Password / OAuth |
+| QQ Mail | `smtp.qq.com` | 465 | `imap.qq.com` | 993 | Authorization Code, not QQ password |
+| 163 Mail | `smtp.163.com` | 465 | `imap.163.com` | 993 | Authorization Code |
 
 ## 🤝 Contributing
 

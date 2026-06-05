@@ -1,21 +1,44 @@
 ---
-name: email-sender
-description: Use this skill whenever the user wants to send emails programmatically via SMTP. This includes sending test emails, sending automated notifications, sending reports or attachments via email, or configuring email clients for school/corporate/enterprise mail servers. Trigger when the user mentions "send email", "发邮件", "SMTP", "邮箱发送", or asks to configure email sending with Python. This skill covers common email servers (Gmail, Outlook, QQ, 163, school mail systems like Coremail) and handles authentication details including regular passwords, app-specific passwords, and alternative passwords for 2FA-enabled accounts.
+name: email
+description: Use this skill whenever the user wants to send emails via SMTP or read received mailbox messages via IMAP. Includes sending test emails, automated notifications, reports/attachments, configuring school/corporate mail clients, and checking latest/unread inbox emails. Trigger on "send email", "发邮件", "SMTP", "邮箱发送", "read email", "读邮箱", "查看邮件", "收件箱", or "IMAP". Supports Gmail, Outlook, QQ, 163, and Coremail systems such as 中南大学 using app/alternative passwords.
 license: Proprietary. LICENSE.txt has complete terms
 ---
 
-# Email Sender Skill Guide
+# Email Skill Guide
 
 ## Overview
 
-This skill enables programmatic email sending via SMTP using Python. It handles various authentication scenarios including standard passwords, app-specific passwords, and alternative passwords for accounts with two-factor authentication (2FA).
+This skill enables programmatic email operations in Python:
+
+- **Send emails** via SMTP, including attachments and BCC-to-self record keeping.
+- **Read received emails** via IMAP in read-only mode, including latest/unread inbox messages.
+
+It supports common authentication scenarios: standard passwords, app-specific passwords, and Coremail alternative passwords for accounts with two-factor authentication (2FA).
+
+## Safety Rules
+
+### Reading email
+
+- Only read mailbox content when the user explicitly asks to read/check emails or otherwise grants permission.
+- Use `scripts/read_csu_email.py` for received mail. It is designed to be **read-only**:
+  - opens the mailbox with `readonly=True`;
+  - uses `BODY.PEEK[]` so messages are not marked as read;
+  - does not send, delete, move, append, expunge, or modify messages.
+- When the user asks to read emails, do **not** send any email unless the user separately and explicitly asks for sending.
+
+### Sending email
+
+- Only send an email when the user explicitly asks to send one.
+- Confirm or infer the recipient, subject, body, and attachments from the user's request before sending.
+- Do not commit real mailbox credentials to public repositories. Keep credentials only in the user's private local configuration or environment variables.
 
 ## Ready-to-Use Scripts
 
-This skill includes pre-configured scripts in the `scripts/` directory:
+This skill includes pre-configured scripts in the `scripts/` directory.
 
 ### `scripts/send_csu_email.py`
-A fully configured command-line email sender for **中南大学 (CSU) mail system**. Already authenticated with saved credentials.
+
+A command-line email sender for SMTP/Coremail systems. The public repository contains placeholders; a user's private installed copy may already have real credentials configured.
 
 **Basic usage:**
 ```bash
@@ -36,11 +59,6 @@ python scripts/send_csu_email.py \
   --body "The meeting starts at 3 PM tomorrow."
 ```
 
-**Or use short flags:**
-```bash
-python scripts/send_csu_email.py -t someone@qq.com -s "Meeting" -b "See you there!"
-```
-
 **With attachments:**
 ```bash
 # Single attachment
@@ -50,15 +68,46 @@ python scripts/send_csu_email.py -t someone@qq.com -a report.pdf
 python scripts/send_csu_email.py -t someone@qq.com -a file1.docx file2.xlsx photo.jpg
 ```
 
-**Pre-configured settings (saved in script):**
-- Sender: `8208230611@csu.edu.cn`
-- SMTP Server: `mail.csu.edu.cn:465` (SSL)
-- Uses alternative password for 2FA
-- Auto-BCC to sender for record keeping
+### `scripts/read_csu_email.py`
 
-## Quick Start
+A command-line inbox reader for CSU/Coremail IMAP. It reuses `SENDER_EMAIL` and `CLIENT_PASSWORD` from `scripts/send_csu_email.py` by default, or reads credentials from environment variables.
 
-### Basic Email Sending
+**Read latest received emails:**
+```bash
+python scripts/read_csu_email.py -n 5
+```
+
+**Read latest unread emails only:**
+```bash
+python scripts/read_csu_email.py --unread -n 10
+```
+
+**Read headers only, without body content:**
+```bash
+python scripts/read_csu_email.py --summary-only -n 10
+```
+
+**Override credentials/server with environment variables:**
+```bash
+EMAIL_ADDRESS="your_id@csu.edu.cn" \
+EMAIL_PASSWORD="YOUR_ALTERNATIVE_PASSWORD" \
+IMAP_SERVER="mail.csu.edu.cn" \
+IMAP_PORT="993" \
+python scripts/read_csu_email.py -n 5
+```
+
+**What it prints:**
+- account and IMAP server;
+- mailbox folder and read-only mode notice;
+- for each message: From, To, Date, Subject, attachment names, and body text unless `--summary-only` is used.
+
+**Default CSU/Coremail read settings:**
+- IMAP Server: `mail.csu.edu.cn`
+- IMAP Port: `993` SSL
+- Mailbox: `INBOX`
+- Authentication: same client/alternative password used for SMTP/IMAP
+
+## Quick Start: Basic Email Sending
 
 ```python
 import smtplib
@@ -68,7 +117,7 @@ from email.header import Header
 
 # Configuration
 SMTP_SERVER = "mail.example.com"      # Your SMTP server
-SMTP_PORT = 465                        # SSL port (usually 465 or 587)
+SMTP_PORT = 465                        # SSL port, usually 465 or 587
 SENDER_EMAIL = "your_email@example.com"
 SENDER_PASSWORD = "your_password"      # See authentication section below
 RECEIVER_EMAIL = "recipient@example.com"
@@ -87,9 +136,34 @@ with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context, timeout=10) as se
 print("Email sent successfully!")
 ```
 
+## Quick Start: Basic Read-Only IMAP Reading
+
+```python
+import imaplib
+from email import policy
+from email.parser import BytesParser
+
+IMAP_SERVER = "mail.example.com"
+IMAP_PORT = 993
+EMAIL_ADDRESS = "your_email@example.com"
+EMAIL_PASSWORD = "your_password"
+
+with imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT) as imap:
+    imap.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+    imap.select("INBOX", readonly=True)
+    status, data = imap.search(None, "ALL")
+    latest_id = data[0].split()[-1]
+    status, fetched = imap.fetch(latest_id, "(BODY.PEEK[])")
+    raw = next(item[1] for item in fetched if isinstance(item, tuple))
+    msg = BytesParser(policy=policy.default).parsebytes(raw)
+    print(msg["From"], msg["Subject"])
+    imap.close()
+    imap.logout()
+```
+
 ## Authentication Guide
 
-### Standard Password (Simple Mail Servers)
+### Standard Password
 
 Some servers use the same password as web login:
 - Personal mailboxes on basic hosting
@@ -99,176 +173,70 @@ Some servers use the same password as web login:
 SENDER_PASSWORD = "your_regular_password"
 ```
 
-### App-Specific Password (Gmail, Outlook, Yahoo)
+### App-Specific Password
 
 For accounts with 2FA enabled, generate an app-specific password:
 
-**Gmail:**
-1. Google Account → Security → 2-Step Verification → App passwords
-2. Generate password for "Mail"
-3. Use the 16-character password
+**Gmail:** Google Account → Security → 2-Step Verification → App passwords
 
-**Outlook/Hotmail:**
-1. Account settings → Security → Advanced security options
-2. Create app password
+**Outlook/Hotmail:** Account settings → Security → Advanced security options → Create app password
 
 ```python
-SENDER_PASSWORD = "xxxx xxxx xxxx xxxx"  # App-specific password
+SENDER_PASSWORD = "xxxx xxxx xxxx xxxx"
 ```
 
-### Alternative Password (Coremail School/Corporate Systems)
+### Alternative Password for Coremail School/Corporate Systems
 
-For Coremail-based systems (中南大学, many Chinese universities, some enterprises):
+For Coremail-based systems such as 中南大学:
 
-**When account has Two-Factor Authentication (2FA) enabled:**
-
-1. Log into webmail (e.g., https://mail.csu.edu.cn)
-2. Go to **Settings** → **Two-Factor Authentication**
-3. Find **[Configure Alternative Password]** link
-4. Generate an alternative password (usually 16 characters)
-5. Use this password for SMTP/IMAP
+1. Log into webmail, for example `https://mail.csu.edu.cn`.
+2. Go to Settings → Two-Factor Authentication.
+3. Find **Configure Alternative Password**.
+4. Generate an alternative/client password.
+5. Use this password for SMTP and IMAP.
 
 ```python
 SENDER_PASSWORD = "AlternativePasswordHere"  # Not the CAS/web login password
 ```
 
-## Common SMTP Configurations
+## Common SMTP and IMAP Configurations
 
-| Provider | SMTP Server | Port | Encryption | Notes |
-|----------|-------------|------|------------|-------|
-| Gmail | smtp.gmail.com | 587 | STARTTLS | Use app-specific password with 2FA |
-| Outlook/Hotmail | smtp.office365.com | 587 | STARTTLS | Use app-specific password with 2FA |
-| QQ Mail | smtp.qq.com | 465/587 | SSL/TLS | Use authorization code, not QQ password |
-| 163 Mail | smtp.163.com | 465/994 | SSL | Use authorization code |
-| 中南大学 (CSU) | mail.csu.edu.cn | 465/25 | SSL | Use alternative password with 2FA |
-| Generic Coremail | mail.domain.com | 465 | SSL | Check if alternative password needed |
-
-## Advanced Examples
-
-### Sending HTML Email
-
-```python
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-
-msg = MIMEMultipart("alternative")
-msg["From"] = SENDER_EMAIL
-msg["To"] = RECEIVER_EMAIL
-msg["Subject"] = "HTML Email"
-
-# Plain text version
-text_part = MIMEText("Plain text content", "plain", "utf-8")
-
-# HTML version
-html_content = """
-<html>
-<body>
-    <h1>Hello</h1>
-    <p>This is an <b>HTML</b> email.</p>
-</body>
-</html>
-"""
-html_part = MIMEText(html_content, "html", "utf-8")
-
-msg.attach(text_part)
-msg.attach(html_part)
-```
-
-### Sending with Attachment
-
-```python
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email import encoders
-import os
-
-msg = MIMEMultipart()
-msg["From"] = SENDER_EMAIL
-msg["To"] = RECEIVER_EMAIL
-msg["Subject"] = "Email with Attachment"
-
-# Attach file
-filename = "document.pdf"
-filepath = "/path/to/document.pdf"
-
-with open(filepath, "rb") as attachment:
-    part = MIMEBase("application", "octet-stream")
-    part.set_payload(attachment.read())
-
-encoders.encode_base64(part)
-part.add_header(
-    "Content-Disposition",
-    f"attachment; filename= {os.path.basename(filename)}",
-)
-msg.attach(part)
-```
-
-### BCC to Self (Keep Record in Webmail)
-
-SMTP clients don't automatically save to "Sent" folder. BCC yourself:
-
-```python
-msg["Bcc"] = SENDER_EMAIL  # Blind carbon copy to yourself
-server.sendmail(SENDER_EMAIL, [RECEIVER_EMAIL, SENDER_EMAIL], msg.as_string())
-```
-
-### STARTTLS (Port 587)
-
-For servers using STARTTLS instead of SSL:
-
-```python
-server = smtplib.SMTP(SMTP_SERVER, 587, timeout=10)
-server.starttls(context=context)
-server.login(SENDER_EMAIL, SENDER_PASSWORD)
-server.sendmail(SENDER_EMAIL, [RECEIVER_EMAIL], msg.as_string())
-server.quit()
-```
-
-## Security Best Practices
-
-- **Never hardcode passwords** in scripts that will be committed to version control
-- **Use environment variables** for credentials:
-  ```python
-  import os
-  SENDER_PASSWORD = os.environ.get("EMAIL_PASSWORD")
-  ```
-- **Alternative/app passwords** are safer than main passwords for automation
-- **Delete scripts** containing passwords after use
-- **Regenerate passwords** if accidentally exposed
+| Provider | SMTP Server | SMTP Port | IMAP Server | IMAP Port | Notes |
+|----------|-------------|-----------|-------------|-----------|-------|
+| Gmail | `smtp.gmail.com` | 587 STARTTLS | `imap.gmail.com` | 993 SSL | Use app-specific password with 2FA |
+| Outlook/Hotmail | `smtp.office365.com` | 587 STARTTLS | `outlook.office365.com` | 993 SSL | Use app-specific password/OAuth depending on account policy |
+| QQ Mail | `smtp.qq.com` | 465/587 | `imap.qq.com` | 993 SSL | Use authorization code, not QQ password |
+| 163 Mail | `smtp.163.com` | 465 | `imap.163.com` | 993 SSL | Use authorization code |
+| 中南大学 (CSU) | `mail.csu.edu.cn` | 465 SSL | `mail.csu.edu.cn` | 993 SSL | Use Coremail alternative password with 2FA |
+| Generic Coremail | `mail.domain.com` | 465 SSL | `mail.domain.com` | 993 SSL | Check if alternative password is required |
 
 ## Troubleshooting
 
-### "Authentication failed" (535 Error)
-- Wrong password type (using web login instead of app/alternative password)
-- Account has 2FA but using regular password
-- Username format incorrect (try with/without @domain)
+### Authentication failed
+
+- Wrong password type: using web/CAS password instead of app/alternative password.
+- Account has 2FA but no client password was generated.
+- Username format is wrong; try the full email address.
 
 ### Connection timeout
-- Firewall blocking port 25/465/587
-- Not on campus network (school mail may require VPN)
-- Wrong server address
 
-### SMTP server not responding
-- Verify SMTP server address with your email provider
-- Some providers require enabling SMTP/IMAP in settings first
+- Firewall blocks port 465/587/993.
+- School mail may require campus network or VPN.
+- Server address or encryption mode is wrong.
 
-### Email sent but recipient didn't receive
-- Check recipient's spam/junk folder
-- Sender domain may have poor reputation
-- Attachment too large
+### Reading marks messages as read
+
+Use `scripts/read_csu_email.py`; it fetches with `BODY.PEEK[]` and opens the mailbox as read-only. Avoid raw `BODY[]` fetches if you do not want to set the Seen flag.
+
+### Email sent but recipient did not receive it
+
+- Check spam/junk folder.
+- Sender domain reputation or SPF/DKIM/DMARC may affect delivery.
+- Attachment may be too large.
 
 ## Important Limitations
 
-- **Sent emails cannot be modified** after sending (same as physical mail)
-- **"Recall" rarely works** across different mail systems
-- **SMTP sends don't appear in webmail "Sent" folder** unless BCC'd or IMAP-save is used
-- **Rate limits** apply: most providers limit emails per hour/day
-
-## School/Corporate Mail Specific Notes
-
-For Coremail-based systems (common in Chinese universities):
-- Username is usually full email: `student_id@school.edu.cn`
-- Password is NOT the CAS/unified authentication password
-- If 2FA enabled, must use **Alternative Password** configured in webmail settings
-- May require campus network or VPN for SMTP access
-- Check https://mail.school.edu.cn/coremail/help/ for official client settings
+- Sent emails cannot be modified after sending.
+- SMTP sends usually do not appear in webmail "Sent" unless BCC-to-self or IMAP-save is used.
+- Reading via IMAP depends on server support and access permissions.
+- Rate limits apply for sending; mail providers may limit messages per hour/day.
