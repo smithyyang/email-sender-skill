@@ -96,7 +96,7 @@ The script uses IMAP read-only mode and `BODY.PEEK[]`; it does not send, delete,
 Clone this repository into the skills directory:
 
 ```bash
-git clone https://github.com/smithyyang/email-sender-skill.git \
+git clone https://github.com/smithyyang/email-skill.git \
   ~/.config/opencode/skills/email
 ```
 
@@ -107,7 +107,7 @@ After that, when any of the following keywords appear in a conversation, OpenCod
 ### Claude Code
 
 ```bash
-git clone https://github.com/smithyyang/email-sender-skill.git \
+git clone https://github.com/smithyyang/email-skill.git \
   ~/.claude/skills/email
 ```
 

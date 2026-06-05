@@ -94,7 +94,7 @@ python scripts/read_csu_email.py --summary-only -n 10
 ### OpenCode
 
 ```bash
-git clone https://github.com/smithyyang/email-sender-skill.git \
+git clone https://github.com/smithyyang/email-skill.git \
   ~/.config/opencode/skills/email
 ```
 
@@ -105,7 +105,7 @@ git clone https://github.com/smithyyang/email-sender-skill.git \
 ### Claude Code
 
 ```bash
-git clone https://github.com/smithyyang/email-sender-skill.git \
+git clone https://github.com/smithyyang/email-skill.git \
   ~/.claude/skills/email
 ```
 
